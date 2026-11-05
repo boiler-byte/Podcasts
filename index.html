@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#070811">
+  <meta name="description" content="Podcasts – Podcasts entdecken, favorisieren und genau dort weiterhören, wo du aufgehört hast.">
+  <title>Podcasts – Dein Podcast-Player</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='17' fill='%23070811'/%3E%3Cpath d='M19 24a13 13 0 0 1 26 0v13a13 13 0 0 1-26 0z' fill='none' stroke='%2300ecff' stroke-width='5'/%3E%3Cpath d='M31 16v32' stroke='%23ff48eb' stroke-width='4'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <div class="site-wrap">
+    <section class="hero" aria-label="Podcast-Navigation">
+      <img class="hero-image" src="assets/hero.webp" width="1672" height="941" alt="Zwei nostalgische Mikrofone mit pinker und türkiser Neonbeleuchtung" fetchpriority="high">
+      <div class="hero-copy">
+        <h1><em>Podcasts.</em></h1>
+      </div>
+      <button type="button" class="hero-orb hero-orb-pink" id="heroFavorites" data-view="favorites" aria-label="Favoriten anzeigen" aria-pressed="false">
+        <svg class="hero-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
+      </button>
+      <button type="button" class="hero-orb hero-orb-blue" id="heroDiscover" data-view="discover" aria-label="Podcasts entdecken" aria-pressed="false">
+        <svg class="hero-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.8" cy="10.8" r="7.1"/><path d="m16 16 5 5M7.5 10.8h6.6m-3.3-3.3v6.6"/></svg>
+      </button>
+    </section>
+
+    <main class="main-shell" id="main">
+      <section class="library-section" id="favoritesPanel" aria-labelledby="favoritesTitle" hidden>
+        <div class="section-intro">
+          <div>
+            <h2 id="favoritesTitle">Deine <span>Favoriten</span></h2>
+          </div>
+          <div class="summary-chip" id="favoriteSummary">0 Podcasts gespeichert</div>
+        </div>
+        <div class="podcast-grid" id="favoritesGrid"></div>
+      </section>
+
+      <section class="library-section" id="discoverPanel" aria-labelledby="discoverTitle" hidden>
+        <div class="section-intro">
+          <div>
+            <h2 id="discoverTitle">Podcasts <span>entdecken</span></h2>
+          </div>
+          <div class="summary-chip" id="discoverSummary">Live-Podcastkatalog</div>
+        </div>
+        <div class="filters-panel">
+          <div class="search-bar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="10.8" cy="10.8" r="7.1"/><path d="m16 16 5 5"/></svg>
+            <input type="search" id="searchInput" placeholder="Podcast, Thema oder Person suchen ..." aria-label="Podcasts suchen" autocomplete="off" spellcheck="false">
+            <kbd>/</kbd>
+          </div>
+          <div class="category-row" id="genreButtons" role="group" aria-label="Podcast-Kategorie"></div>
+          <div class="filter-row">
+            <label class="filter-field">Land
+              <select id="countryFilter"><option value="de">Deutschland</option><option value="at">Österreich</option><option value="ch">Schweiz</option><option value="us">USA</option><option value="gb">Großbritannien</option></select>
+            </label>
+            <label class="filter-field">Sortierung
+              <select id="sortFilter"><option value="popular">Beliebtheit / Relevanz</option><option value="az">Name A – Z</option><option value="za">Name Z – A</option></select>
+            </label>
+            <label class="filter-field">Hörstatus
+              <select id="statusFilter"><option value="all">Alle Podcasts</option><option value="unheard">Noch nicht gehört</option><option value="started">Bereits gehört</option></select>
+            </label>
+            <button class="reset-button" id="resetFilters" type="button">Filter zurücksetzen</button>
+          </div>
+        </div>
+        <div class="results-meta"><span id="resultsTitle">Beliebte Podcasts</span><span id="resultsCount" aria-live="polite"></span></div>
+        <div class="podcast-grid" id="discoverGrid" aria-live="polite"></div>
+      </section>
+    </main>
+    <footer class="footer"><span>© <span id="year"></span> Podcasts</span><span>Podcastdaten: Apple Podcasts · Favoriten &amp; Fortschritt: lokal in IndexedDB</span></footer>
+  </div>
+
+  <div class="drawer-backdrop" id="drawerBackdrop" hidden></div>
+  <aside class="detail-drawer" id="detailDrawer" role="dialog" aria-modal="true" aria-labelledby="drawerTitle" aria-hidden="true" hidden>
+    <div class="drawer-topbar"><span class="drawer-eyebrow">EPISODEN</span><button class="icon-button" type="button" id="drawerClose" aria-label="Episodenliste schließen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m18 6-12 12M6 6l12 12"/></svg></button></div>
+    <div class="drawer-show" id="drawerShow"></div>
+    <div class="drawer-list-head"><h3>Alle Episoden</h3><button type="button" class="refresh-button" id="refreshEpisodes" title="Episoden aktualisieren">↻ Aktualisieren</button></div>
+    <div class="episode-list" id="episodeList"></div>
+  </aside>
+
+  <div class="player" id="player" role="region" aria-label="Audioplayer" hidden>
+    <div class="player-inner">
+      <img class="player-art" id="playerArt" src="" alt="" width="56" height="56">
+      <div class="player-info"><div id="playerPodcast" class="player-podcast"></div><div id="playerEpisode" class="player-episode"></div></div>
+      <div class="player-transport">
+        <button id="skipBack" class="transport-button" type="button" aria-label="15 Sekunden zurück" title="15 Sekunden zurück"><span class="skip-icon">↶</span><small>15</small></button>
+        <button id="playerToggle" class="transport-play" type="button" aria-label="Abspielen">▶</button>
+        <button id="skipForward" class="transport-button" type="button" aria-label="30 Sekunden vor" title="30 Sekunden vor"><span class="skip-icon">↷</span><small>30</small></button>
+      </div>
+      <div class="player-seek"><span id="currentTime">0:00</span><input id="seekBar" type="range" min="0" max="1000" step="1" value="0" aria-label="Abspielposition"><span id="totalTime">0:00</span></div>
+      <button id="speedButton" class="speed-button" type="button" aria-label="Wiedergabegeschwindigkeit ändern">1×</button>
+      <button id="playerClose" class="player-close" type="button" title="Player schließen" aria-label="Player schließen">×</button>
+    </div>
+    <div class="player-progress" id="playerProgress"></div>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <audio id="audio" preload="metadata"></audio>
+</body>
+</html>
