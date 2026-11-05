@@ -1,4 +1,4 @@
-/* Podcasts v2 – Vanilla JavaScript / IndexedDB. No frameworks and no server required. */
+/* Podcasts v4 – Vanilla JavaScript / IndexedDB / Progressive Web App. */
 (() => {
   'use strict';
 
@@ -33,8 +33,8 @@
   const icon = (name) => {
     const base='viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"';
     const paths={
-      play:'<path d="m8 5 11 7-11 7V5z"/>',
-      pause:'<path d="M8 5v14M16 5v14" stroke-width="3"/>',
+      play:'<path d="M8.3 5.15a1 1 0 0 1 1.53-.85l9.4 6.85a1.05 1.05 0 0 1 0 1.7l-9.4 6.85a1 1 0 0 1-1.53-.85V5.15Z" fill="currentColor" stroke="none"/>',
+      pause:'<rect x="6.25" y="5" width="4.5" height="14" rx="1.1" fill="currentColor" stroke="none"/><rect x="13.25" y="5" width="4.5" height="14" rx="1.1" fill="currentColor" stroke="none"/>',
       heart:'<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21.2l8.8-8.8a5.5 5.5 0 0 0 0-7.8z"/>',
       spinner:'<path d="M12 3a9 9 0 1 1-9 9"/>',
       check:'<path d="m5 12 4 4L19 6"/>'
@@ -306,6 +306,10 @@
     state.durationFallback=episode.duration;state.lastSave=0;
     $('player').hidden=false;$('playerArt').src=episode.art||podcast.art||'';
     $('playerArt').alt=`Cover: ${podcast.title}`;
+    // Always use the podcast's own cover for the darkened playing backgrounds.
+    const cover=podcast.art||episode.art||'';
+    $('playerBackgroundArt').src=cover;
+    $('nowPlayingBackgroundArt').src=cover;
     $('playerPodcast').textContent=podcast.title;$('playerEpisode').textContent=episode.title;
     audio.src=episode.url;audio.playbackRate=state.speed;
     audio.load();updatePlayerUI();
@@ -325,9 +329,14 @@
     $('currentTime').textContent=fmtTime(current);$('totalTime').textContent=fmtTime(duration);
     $('seekBar').value=String(Math.round(percent*10));$('seekBar').style.setProperty('--seek-percent',`${percent}%`);
     $('playerProgress').style.width=`${percent}%`;
-    $('playerToggle').textContent=audio.paused?'▶':'Ⅱ';
-    $('playerToggle').classList.toggle('playing',!audio.paused);
-    $('playerToggle').setAttribute('aria-label',audio.paused?'Abspielen':'Pause');
+    // A single is-playing state drives both icons and the cover backgrounds.
+    const playing=!audio.paused&&!audio.ended;
+    $('player').classList.toggle('is-playing',playing);
+    document.body.classList.toggle('is-playing',playing);
+    $('playerToggle').classList.toggle('playing',playing);
+    $('playerToggle').setAttribute('aria-label',playing?'Pausieren':'Abspielen');
+    $('playerToggle').setAttribute('title',playing?'Pausieren':'Abspielen');
+    $('playerToggle').setAttribute('aria-pressed',String(playing));
     $('speedButton').textContent=`${String(state.speed).replace('.',',')}×`;
   }
   function renderDrawerHeader(podcast){
@@ -342,7 +351,7 @@
       const progress=episodeProgress(podcast.id,e.id),pct=roundPercent(progress);
       const playing=state.current?.podcast.id===podcast.id&&state.current?.episode.id===e.id&&!audio.paused;
       const desc=e.description.length>180?`${e.description.slice(0,178)}…`:e.description;
-      return `<div class="episode-item"><span class="episode-number">${String(i+1).padStart(2,'0')}</span><div class="episode-body"><h4 class="episode-title">${safe(e.title)}</h4><div class="episode-date"><span>${safe(fmtDate(e.releaseDate))}</span><span>${safe(fmtDuration(e.duration))}</span></div>${desc?`<p class="episode-desc">${safe(desc)}</p>`:''}${progress&&progress.currentTime>0?`<div class="episode-progress-row"><div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div><span>${progress.completed?'Gehört':`${pct} %`}</span></div>`:''}</div><button class="episode-play ${playing?'is-playing':''}" type="button" data-action="episode-play" data-episode="${safe(e.id)}" aria-label="${safe(e.title)} ${playing?'pausieren':'abspielen'}" ${e.url?'':'disabled'}>${playing?'Ⅱ':'▶'}</button></div>`;
+      return `<div class="episode-item"><span class="episode-number">${String(i+1).padStart(2,'0')}</span><div class="episode-body"><h4 class="episode-title">${safe(e.title)}</h4><div class="episode-date"><span>${safe(fmtDate(e.releaseDate))}</span><span>${safe(fmtDuration(e.duration))}</span></div>${desc?`<p class="episode-desc">${safe(desc)}</p>`:''}${progress&&progress.currentTime>0?`<div class="episode-progress-row"><div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div><span>${progress.completed?'Gehört':`${pct} %`}</span></div>`:''}</div><button class="episode-play ${playing?'is-playing':''}" type="button" data-action="episode-play" data-episode="${safe(e.id)}" aria-label="${safe(e.title)} ${playing?'pausieren':'abspielen'}" ${e.url?'':'disabled'}>${icon(playing?'pause':'play')}</button></div>`;
     }).join('');
   }
   async function openDrawer(podcast){
@@ -421,7 +430,7 @@
     $('skipForward').addEventListener('click',()=>{if(state.current)audio.currentTime=Math.min(Number.isFinite(audio.duration)?audio.duration:1e12,audio.currentTime+30);});
     $('seekBar').addEventListener('input',e=>{if(!state.current)return;const d=Number.isFinite(audio.duration)?audio.duration:state.durationFallback;if(d>0){audio.currentTime=d*Number(e.target.value)/1000;updatePlayerUI();persistCurrent(true);}});
     $('speedButton').addEventListener('click',()=>{const speeds=[1,1.25,1.5,2];state.speed=speeds[(speeds.indexOf(state.speed)+1)%speeds.length];audio.playbackRate=state.speed;updatePlayerUI();});
-    $('playerClose').addEventListener('click',()=>{persistCurrent(true);audio.pause();audio.removeAttribute('src');audio.load();state.current=null;$('player').hidden=true;renderFavorites();renderDiscoverResults();});
+    $('playerClose').addEventListener('click',()=>{persistCurrent(true);audio.pause();audio.removeAttribute('src');audio.load();state.current=null;$('player').hidden=true;$('player').classList.remove('is-playing');document.body.classList.remove('is-playing');renderFavorites();renderDiscoverResults();});
     audio.addEventListener('loadedmetadata',()=>{
       const d=audio.duration;
       if(state.pendingResume>1 && Number.isFinite(d) && d>0){audio.currentTime=Math.min(state.pendingResume,Math.max(0,d-2));}
@@ -429,9 +438,10 @@
     });
     audio.addEventListener('timeupdate',()=>{if(!state.current)return;updatePlayerUI();persistCurrent();});
     audio.addEventListener('play',()=>{updatePlayerUI();renderFavorites();renderDiscoverResults();if(state.selected)renderEpisodeList(state.selected);});
+    audio.addEventListener('playing',updatePlayerUI);
     audio.addEventListener('pause',()=>{if(state.current){persistCurrent(true);updatePlayerUI();renderFavorites();renderDiscoverResults();if(state.selected)renderEpisodeList(state.selected);}});
     audio.addEventListener('ended',()=>{if(state.current){persistCurrent(true,true);updatePlayerUI();renderFavorites();renderDiscoverResults();if(state.selected)renderEpisodeList(state.selected);}});
-    audio.addEventListener('error',()=>{if(state.current&&audio.error?.code===4)toast('Audioformat oder Stream nicht unterstützt. Andere Episode versuchen.');});
+    audio.addEventListener('error',()=>{if(state.current){audio.pause();updatePlayerUI();if(audio.error?.code===4)toast('Audioformat oder Stream nicht unterstützt. Andere Episode versuchen.');}});
     document.addEventListener('visibilitychange',()=>{if(document.hidden)persistCurrent(true);});
     window.addEventListener('pagehide',()=>persistCurrent(true));
   }
@@ -443,6 +453,14 @@
       favorites.forEach(p=>state.favorites.set(String(p.id),p));progress.forEach(p=>state.progress.set(p.key,p));
     }catch(e){toast('IndexedDB ist nicht verfügbar. Favoriten und Fortschritt können nicht dauerhaft gespeichert werden.');}
     renderFavorites();setView(state.favorites.size?'favorites':'discover');discover();
+  }
+  // Service Worker only runs from HTTPS or localhost (never from file://).
+  // It caches the application shell, not third-party podcasts or audio streams.
+  if ('serviceWorker' in navigator && window.isSecureContext) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./service-worker.js', {scope:'./'})
+        .catch(error => console.warn('PWA-Service-Worker konnte nicht registriert werden:', error));
+    });
   }
   init();
 })();
