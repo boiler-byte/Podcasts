@@ -360,7 +360,7 @@
     // Each opened episode list gets one history entry, so browser Back closes it.
     // Replacing an already open list does not stack additional drawer entries.
     if(!state.drawerHistoryKey){
-      state.drawerHistoryKey=`${Date.now()}-${++state.openingId}`;
+      state.drawerHistoryKey=`${Date.now()}-${state.openingId}`;
       history.pushState({...history.state, podcastDrawerKey:state.drawerHistoryKey},'');
     }
     state.selected=podcast;state.drawerReturnFocus=document.activeElement;

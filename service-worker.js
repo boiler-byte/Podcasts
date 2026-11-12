@@ -1,10 +1,10 @@
 /* Podcasts v4 – only the local application shell is cached. */
-const SHELL_CACHE = 'podcasts-shell-v5';
+const SHELL_CACHE = 'podcasts-shell-v6';
 const SHELL_FILES = [
   './',
   './index.html',
   './styles.css?v=4',
-  './app.js?v=5',
+  './app.js?v=6',
   './manifest.webmanifest',
   './assets/hero.webp',
   './icons/favicon.svg',
