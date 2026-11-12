@@ -23,7 +23,7 @@
     discover:[], view:'discover', selected:null, filter:{query:'',genre:'all',country:'de',sort:'popular',status:'all'},
     requestId:0, loadingDiscover:false, discoverError:false, busyPodcast:null, current:null, pendingResume:0,
     durationFallback:0, speed:1, lastSave:0, lastCardUpdate:0, toastTimer:null,
-    drawerReturnFocus:null, openingId:0
+    drawerReturnFocus:null, openingId:0, drawerHistoryKey:null
   };
   const $ = id => document.getElementById(id);
   const audio = $('audio');
@@ -357,6 +357,12 @@
   async function openDrawer(podcast){
     if(!podcast)return;
     const token=++state.openingId;
+    // Each opened episode list gets one history entry, so browser Back closes it.
+    // Replacing an already open list does not stack additional drawer entries.
+    if(!state.drawerHistoryKey){
+      state.drawerHistoryKey=`${Date.now()}-${++state.openingId}`;
+      history.pushState({...history.state, podcastDrawerKey:state.drawerHistoryKey},'');
+    }
     state.selected=podcast;state.drawerReturnFocus=document.activeElement;
     $('drawerBackdrop').hidden=false;$('detailDrawer').hidden=false;$('detailDrawer').setAttribute('aria-hidden','false');
     document.body.classList.add('no-scroll');renderDrawerHeader(podcast);
@@ -365,7 +371,12 @@
     try{await getEpisodes(podcast);if(token!==state.openingId)return;renderEpisodeList(podcast);renderFavorites();renderDiscoverResults();}
     catch(error){if(token===state.openingId){$('episodeList').innerHTML='<div class="drawer-no-episodes">Episoden konnten nicht geladen werden. Prüfe deine Internetverbindung und versuche es über „Aktualisieren“ erneut.</div>';}}
   }
-  function closeDrawer(){
+  function closeDrawer(fromHistory=false){
+    if(!state.selected)return;
+    const drawerKey=state.drawerHistoryKey;
+    state.drawerHistoryKey=null;
+    // Explicit close (X, backdrop, Escape) removes the same entry used by Back.
+    if(!fromHistory && drawerKey && history.state?.podcastDrawerKey===drawerKey)history.back();
     state.openingId++;state.selected=null;$('drawerBackdrop').hidden=true;$('detailDrawer').hidden=true;
     $('detailDrawer').setAttribute('aria-hidden','true');document.body.classList.remove('no-scroll');
     if(state.drawerReturnFocus&&state.drawerReturnFocus.isConnected)state.drawerReturnFocus.focus();
@@ -412,8 +423,11 @@
     $('discoverGrid').addEventListener('click',handleCardClick);
     $('drawerShow').addEventListener('click',handleCardClick);
     $('episodeList').addEventListener('click',handleCardClick);
-    $('drawerClose').addEventListener('click',closeDrawer);
-    $('drawerBackdrop').addEventListener('click',closeDrawer);
+    $('drawerClose').addEventListener('click',()=>closeDrawer());
+    $('drawerBackdrop').addEventListener('click',()=>closeDrawer());
+    window.addEventListener('popstate',()=>{
+      if(state.selected)closeDrawer(true);
+    });
     $('refreshEpisodes').addEventListener('click',async()=>{
       if(!state.selected)return;
       const p=state.selected;
